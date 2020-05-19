@@ -47,7 +47,7 @@ const Form = ({
   return (
     <form className={className}>
       <div className="mb-2 w-64">
-        <h2 className="mb-2">Dictionnary</h2>
+        <h2 className="mb-2">Dictionary</h2>
         <MultipleChoice
           options={[
             {
