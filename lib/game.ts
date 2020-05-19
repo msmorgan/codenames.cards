@@ -24,7 +24,7 @@ export interface IDuetGame {
   nextGameId?: string;
 }
 
-export type IGrid = IClassicGrid | IDuetGrid;
+export type IGrid<T extends GridItem> = T[];
 
 export interface IGameView {
   playerId: string;
@@ -114,7 +114,7 @@ export enum ClassicGridItem {
 }
 
 export enum DuetGridItem {
-  GG = 1,
+  GG = 5,
   GB,
   GN,
   BG,
@@ -125,6 +125,8 @@ export enum DuetGridItem {
   NN,
 }
 
+export type GridItem = ClassicGridItem | DuetGridItem;
+
 export enum Color {
   Neutral,
   Red,
@@ -133,8 +135,12 @@ export enum Color {
   Green,
 }
 
-export type IClassicGrid = ClassicGridItem[];
-export type IDuetGrid = DuetGridItem[];
+export type IClassicGrid = IGrid<ClassicGridItem>;
+export type IDuetGrid = IGrid<DuetGridItem>;
+
+export type IGridConfig<T extends GridItem> = {
+  [item in T]: number;
+}
 
 export const defaultOptions: IGameOptions = {
   language: "en",
@@ -158,10 +164,10 @@ export function isClassicGame(game: IGame): game is IClassicGame {
   return game?.options?.mode === "classic";
 }
 
-export function isClassicGrid(grid: IGrid): grid is IClassicGrid {
-  return grid.findIndex((e) => e === DuetGridItem.NN) === -1;
+export function isClassicGrid(grid: IGrid<GridItem>): grid is IClassicGrid {
+  return grid.indexOf(DuetGridItem.NN) === -1;
 }
 
-export function isDuetGrid(grid: IGrid): grid is IDuetGrid {
-  return grid.findIndex((e) => e === DuetGridItem.NN) > -1;
+export function isDuetGrid(grid: IGrid<GridItem>): grid is IDuetGrid {
+  return grid.indexOf(DuetGridItem.NN) > -1;
 }

@@ -12,12 +12,23 @@ import {
 } from "unique-names-generator";
 
 import {
+  range,
+  shuffle,
+} from "lodash";
+
+import {
   ClassicGridItem,
   DuetGridItem,
+  GridItem,
   IGameOptions,
   defaultOptions,
   IClassicGrid,
   IDuetGrid,
+  IGrid,
+  IGridConfig,
+  IGame,
+  IClassicGame,
+  IDuetGame,
 } from "./game";
 
 const dictionaries = {
@@ -28,7 +39,8 @@ const dictionaries = {
   emoji: dictionaryEmoji,
 };
 
-export default (opts?: Partial<IGameOptions>) => {
+
+export default function newGame(opts?: Partial<IGameOptions>): IGame {
   let options: IGameOptions = {
     ...defaultOptions,
     ...opts,
@@ -42,7 +54,7 @@ export default (opts?: Partial<IGameOptions>) => {
   if (options.mode === "classic") {
     const randomStart = Math.random() < 0.5 ? "red" : "blue";
 
-    return {
+    return <IClassicGame>{
       words,
       options,
       players: {},
@@ -55,7 +67,7 @@ export default (opts?: Partial<IGameOptions>) => {
   }
 
   if (options.mode === "duet") {
-    return {
+    return <IDuetGame>{
       words,
       options,
       players: {},
@@ -70,10 +82,10 @@ export default (opts?: Partial<IGameOptions>) => {
 
 function getClassicGrid(whoStarts: "red" | "blue"): IClassicGrid {
   const counts = {
-    [ClassicGridItem.Red]: [0, 8 + (whoStarts === "red" ? 1 : 0)],
-    [ClassicGridItem.Blue]: [0, 8 + (whoStarts === "blue" ? 1 : 0)],
-    [ClassicGridItem.Black]: [0, 1],
-    [ClassicGridItem.Neutral]: [0, 7],
+    [ClassicGridItem.Red]: 8 + (whoStarts === "red" ? 1 : 0),
+    [ClassicGridItem.Blue]: 8 + (whoStarts === "blue" ? 1 : 0),
+    [ClassicGridItem.Black]: 1,
+    [ClassicGridItem.Neutral]: 7,
   };
 
   return getRandomGrid(counts);
@@ -81,59 +93,54 @@ function getClassicGrid(whoStarts: "red" | "blue"): IClassicGrid {
 
 function getDuetGrid(): IDuetGrid {
   const counts = {
-    [DuetGridItem.GB]: [0, 1],
-    [DuetGridItem.GN]: [0, 5],
-    [DuetGridItem.GG]: [0, 3],
-    [DuetGridItem.BG]: [0, 1],
-    [DuetGridItem.BB]: [0, 1],
-    [DuetGridItem.BN]: [0, 1],
-    [DuetGridItem.NG]: [0, 5],
-    [DuetGridItem.NB]: [0, 1],
-    [DuetGridItem.NN]: [0, 7],
+    [DuetGridItem.GB]: 1,
+    [DuetGridItem.GN]: 5,
+    [DuetGridItem.GG]: 3,
+    [DuetGridItem.BG]: 1,
+    [DuetGridItem.BB]: 1,
+    [DuetGridItem.BN]: 1,
+    [DuetGridItem.NG]: 5,
+    [DuetGridItem.NB]: 1,
+    [DuetGridItem.NN]: 7,
   };
 
   return getRandomGrid(counts);
 }
 
-const getId = () =>
-  uniqueNamesGenerator({
+function getId(): string {
+  return uniqueNamesGenerator({
     dictionaries: [adjectives, adjectives, colors, animals],
     length: 4,
     separator: "",
     style: "capital",
-  });
+  })
+}
 
-const getRandomGrid = (counts) => {
+function getRandomGrid<T extends GridItem>(counts: IGridConfig<T>): IGrid<T> {
   const cardsCount = 25;
-  const statuses = Object.keys(counts);
-  let grid = [];
-  for (let i = 0; i < cardsCount; i++) {
-    let random = Math.random();
-
-    for (let s = 0; s < statuses.length; s++) {
-      const status = statuses[s];
-      let [current, target] = counts[status];
-      random -= (target - current) / (cardsCount - grid.length);
-      if (random < 0) {
-        grid.push(status);
-        counts[status][0] = current + 1;
-        break;
-      }
+  const statuses = Object.keys(counts).map(k => Number(k) as T);
+  const grid: IGrid<T> = [];
+  const gridIndexes = shuffle(range(cardsCount));
+  for (const status of statuses) {
+    for (let i = 0; i < counts[status]; i++) {
+      grid[gridIndexes.pop()] = status;
     }
   }
   return grid;
-};
+}
 
-function getRandom(arr, n) {
-  var result = new Array(n),
-    len = arr.length,
-    taken = new Array(len);
-  if (n > len)
+function getRandom<T>(arr: T[], count: number): T[] {
+  if (count > arr.length)
     throw new RangeError("getRandom: more elements taken than available");
-  while (n--) {
-    var x = Math.floor(Math.random() * len);
-    result[n] = arr[x in taken ? taken[x] : x];
-    taken[x] = --len in taken ? taken[len] : len;
+
+  const result: T[] = [];
+  const taken: { [idx: number]: number } = {};
+  let len = arr.length;
+  for (let i = 0; i < count; i++) {
+    const index = Math.ceil(Math.random() * len);
+    result.push(arr[index in taken ? taken[index] : index]);
+    len -= 1;
+    taken[index] = len in taken ? taken[len] : len;
   }
   return result;
 }
